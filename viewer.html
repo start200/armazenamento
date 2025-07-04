@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Arquivo</title>
+</head>
+<body>
+    <div id="fileViewer"></div>
+
+    <script>
+        const storage = JSON.parse(localStorage.getItem('fileManager95'));
+        const selectedFile = JSON.parse(localStorage.getItem('selectedFile'));
+
+        const file = storage.folders[selectedFile.folder][selectedFile.index];
+        const fileViewer = document.getElementById('fileViewer');
+
+        if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+            let content = '';
+            try {
+                const base64 = file.content.split(',')[1];
+                content = atob(base64);
+            } catch (error) {
+                content = 'Erro ao carregar o arquivo.';
+            }
+
+            fileViewer.innerHTML = `
+                <h3>Editando "${file.name}"</h3>
+                <textarea id="editor" style="width:100%;height:400px;">${content}</textarea><br>
+                <button onclick="saveEditedFile()">Salvar</button>
+                <button onclick="window.close()">Fechar</button>
+            `;
+        } else if (file.type.startsWith('image/')) {
+            fileViewer.innerHTML = `
+                <h3>Visualizando "${file.name}"</h3>
+                <img src="${file.content}" style="max-width:100%"><br>
+                <button onclick="window.close()">Fechar</button>
+            `;
+        } else {
+            fileViewer.innerHTML = `
+                <h3>Visualizando "${file.name}"</h3>
+                <a href="${file.content}" download="${file.name}">[Baixar]</a><br>
+                <button onclick="window.close()">Fechar</button>
+            `;
+        }
+
+        function saveEditedFile() {
+            const newContent = document.getElementById('editor').value;
+            storage.folders[selectedFile.folder][selectedFile.index].content = 'data:text/plain;base64,' + btoa(newContent);
+            localStorage.setItem('fileManager95', JSON.stringify(storage));
+            alert('Arquivo salvo com sucesso!');
+        }
+    </script>
+</body>
+</html>
