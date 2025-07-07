@@ -1,49 +1,62 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FileManager 95</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FileManager 95 com Login</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="module" src="script.js"></script>
 </head>
 <body>
+  <!-- Tela de Login -->
+  <div id="loginSection" class="login-box">
+    <h2>Login</h2>
+    <input type="email" id="loginUsername" placeholder="Email" />
+    <input type="password" id="loginPassword" placeholder="Senha" />
+    <button onclick="login()">Entrar</button>
+    <p><a onclick="showRegister()">Criar uma conta</a></p>
+  </div>
+
+  <!-- Tela de Registro -->
+  <div id="registerSection" class="register-box hidden">
+    <h2>Registrar</h2>
+    <input type="email" id="registerUsername" placeholder="Email" />
+    <input type="password" id="registerPassword" placeholder="Senha" />
+    <button onclick="register()">Registrar</button>
+    <p><a onclick="showLogin()">Já tem conta? Entrar</a></p>
+  </div>
+
+  <!-- Tela Principal -->
+  <div id="appSection" class="hidden">
     <header>
-        <h1>FileManager 95</h1>
+      <h1>FileManager 95</h1>
     </header>
 
     <nav>
-        <button onclick="showSection('upload')">Enviar Arquivos</button>
-        <button onclick="showSection('documents')">Criar Documento</button>
-        <button onclick="showSection('folders')">Gerenciar Pastas</button>
+      <button onclick="showSection('upload')">Enviar Arquivos</button>
+      <button onclick="showSection('folders')">Gerenciar Pastas</button>
+      <button onclick="logout()">Sair</button>
     </nav>
 
     <main>
-        <section id="upload" class="section">
-            <h2>Enviar Arquivos</h2>
-            <select id="folderSelect"></select><br><br>
-            <input type="file" id="fileInput">
-            <button onclick="uploadFile()">Enviar</button>
-        </section>
+      <section id="upload" class="section">
+        <h2>Enviar Arquivos</h2>
+        <select id="folderSelect"></select><br /><br />
+        <input type="file" id="fileInput" />
+        <button onclick="uploadFile()">Enviar</button>
+      </section>
 
-        <section id="documents" class="section hidden">
-            <h2>Criar Documento</h2>
-            <select id="folderSelectDoc"></select><br><br>
-            <textarea id="docEditor" rows="10" cols="50" placeholder="Digite seu documento aqui..."></textarea><br>
-            <button onclick="saveDocument()">Salvar Documento</button>
-        </section>
-
-        <section id="folders" class="section hidden">
-            <h2>Gerenciar Pastas</h2>
-            <input type="text" id="newFolderName" placeholder="Nome da pasta">
-            <button onclick="createFolder()">Criar Pasta</button>
-            <div id="folderList"></div>
-        </section>
+      <section id="folders" class="section hidden">
+        <h2>Gerenciar Pastas</h2>
+        <input type="text" id="newFolderName" placeholder="Nome da pasta" />
+        <button onclick="createFolder()">Criar Pasta</button>
+        <div id="folderList"></div>
+      </section>
     </main>
 
     <footer>
-        <p>FileManager 95 - Simulação Retrô</p>
+      <p>FileManager 95 - Simulação Retrô</p>
     </footer>
-
-    <script src="script.js"></script>
+  </div>
 </body>
 </html>
