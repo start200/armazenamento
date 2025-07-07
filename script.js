@@ -10,7 +10,8 @@ import {
   push,
   get,
   child,
-  set
+  set,
+  remove
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
 window.login = function () {
@@ -119,6 +120,15 @@ function updateFolderSelects() {
           div.className = 'folder';
           div.textContent = folder;
           div.onclick = () => listFilesInFolder(folder);
+
+          const delBtn = document.createElement('button');
+          delBtn.textContent = '🗑';
+          delBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteFolder(folder);
+          };
+          div.appendChild(delBtn);
+
           folderList.appendChild(div);
         }
       });
@@ -127,6 +137,19 @@ function updateFolderSelects() {
       listFilesInFolder(firstFolder);
     }
   });
+}
+
+function deleteFolder(folderName) {
+  const userId = auth.currentUser?.uid;
+  if (!userId) return;
+  if (confirm(`Deseja excluir a pasta "${folderName}" e todos os arquivos?`)) {
+    set(ref(db, `users/${userId}/folders/${folderName}`), null)
+      .then(() => {
+        alert('Pasta excluída!');
+        updateFolderSelects();
+        document.getElementById('fileList').innerHTML = '';
+      });
+  }
 }
 
 function listFilesInFolder(folderName) {
@@ -141,13 +164,12 @@ function listFilesInFolder(folderName) {
     if (snapshot.exists()) {
       const files = snapshot.val();
 
-      Object.keys(files).forEach(fileId => {
-        const file = files[fileId];
+      Object.entries(files).forEach(([fileId, file]) => {
         const li = document.createElement('li');
-        li.textContent = file.name;
+        li.textContent = file.name + ' ';
 
         const viewBtn = document.createElement('button');
-        viewBtn.textContent = 'Visualizar';
+        viewBtn.textContent = '👁';
         viewBtn.onclick = () => {
           const blob = atob(file.content);
           const byteArray = new Uint8Array(blob.length);
@@ -159,7 +181,34 @@ function listFilesInFolder(folderName) {
           window.open(url, '_blank');
         };
 
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '✏️';
+        editBtn.onclick = () => {
+          const decoded = atob(file.content);
+          const newContent = prompt("Editar conteúdo:", decoded);
+          if (newContent !== null) {
+            const updatedData = {
+              ...file,
+              content: btoa(newContent)
+            };
+            set(ref(db, `users/${userId}/folders/${folderName}/${fileId}`), updatedData)
+              .then(() => alert("Arquivo atualizado!"))
+              .then(() => listFilesInFolder(folderName));
+          }
+        };
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '🗑';
+        delBtn.onclick = () => {
+          if (confirm(`Tem certeza que deseja excluir ${file.name}?`)) {
+            set(ref(db, `users/${userId}/folders/${folderName}/${fileId}`), null)
+              .then(() => listFilesInFolder(folderName));
+          }
+        };
+
         li.appendChild(viewBtn);
+        li.appendChild(editBtn);
+        li.appendChild(delBtn);
         fileList.appendChild(li);
       });
     } else {
