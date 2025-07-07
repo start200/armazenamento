@@ -77,7 +77,6 @@ window.createFolder = function () {
     });
 };
 
-
 window.uploadFile = function () {
   const folder = document.getElementById('folderSelect').value;
   const fileInput = document.getElementById('fileInput');
@@ -96,17 +95,75 @@ window.uploadFile = function () {
 
 function updateFolderSelects() {
   const folderSelect = document.getElementById('folderSelect');
+  const folderList = document.getElementById('folderList');
   folderSelect.innerHTML = '';
+  if (folderList) folderList.innerHTML = '';
+
   const userId = auth.currentUser?.uid;
   if (!userId) return;
+
   get(child(ref(db), `users/${userId}/folders`)).then(snapshot => {
     if (snapshot.exists()) {
-      Object.keys(snapshot.val()).forEach(folder => {
+      const folders = snapshot.val();
+
+      Object.keys(folders).forEach(folder => {
+        // select
         const option = document.createElement('option');
         option.value = folder;
         option.textContent = folder;
         folderSelect.appendChild(option);
+
+        // lista visual
+        if (folderList) {
+          const div = document.createElement('div');
+          div.className = 'folder';
+          div.textContent = folder;
+          div.onclick = () => listFilesInFolder(folder);
+          folderList.appendChild(div);
+        }
       });
+
+      const firstFolder = Object.keys(folders)[0];
+      listFilesInFolder(firstFolder);
+    }
+  });
+}
+
+function listFilesInFolder(folderName) {
+  const fileList = document.getElementById('fileList');
+  if (!fileList) return;
+  fileList.innerHTML = '';
+
+  const userId = auth.currentUser?.uid;
+  if (!userId) return;
+
+  get(child(ref(db), `users/${userId}/folders/${folderName}`)).then(snapshot => {
+    if (snapshot.exists()) {
+      const files = snapshot.val();
+
+      Object.keys(files).forEach(fileId => {
+        const file = files[fileId];
+        const li = document.createElement('li');
+        li.textContent = file.name;
+
+        const viewBtn = document.createElement('button');
+        viewBtn.textContent = 'Visualizar';
+        viewBtn.onclick = () => {
+          const blob = atob(file.content);
+          const byteArray = new Uint8Array(blob.length);
+          for (let i = 0; i < blob.length; i++) {
+            byteArray[i] = blob.charCodeAt(i);
+          }
+          const fileBlob = new Blob([byteArray], { type: file.type });
+          const url = URL.createObjectURL(fileBlob);
+          window.open(url, '_blank');
+        };
+
+        li.appendChild(viewBtn);
+        fileList.appendChild(li);
+      });
+    } else {
+      fileList.innerHTML = '<li>Nenhum arquivo nesta pasta.</li>';
     }
   });
 }
