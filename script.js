@@ -13,25 +13,23 @@ import {
   set
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-window.login = function login() {
+window.login = function () {
   const email = document.getElementById('loginUsername').value;
   const password = document.getElementById('loginPassword').value;
-
   signInWithEmailAndPassword(auth, email, password)
     .then(() => location.reload())
     .catch(error => alert('Erro: ' + error.message));
 };
 
-window.register = function register() {
+window.register = function () {
   const email = document.getElementById('registerUsername').value;
   const password = document.getElementById('registerPassword').value;
-
   createUserWithEmailAndPassword(auth, email, password)
     .then(() => alert('Registrado com sucesso!'))
     .catch(error => alert('Erro: ' + error.message));
 };
 
-window.logout = function logout() {
+window.logout = function () {
   signOut(auth).then(() => location.reload());
 };
 
@@ -54,8 +52,8 @@ window.createFolder = function () {
   const folderName = document.getElementById('newFolderName').value.trim();
   if (!folderName) return alert('Nome inválido.');
   const userId = auth.currentUser.uid;
-  set(ref(db, `users/${userId}/folders/${folderName}`), []);
-  updateFolderSelects();
+  set(ref(db, `users/${userId}/folders/${folderName}`), [])
+    .then(() => updateFolderSelects());
 };
 
 window.uploadFile = function () {
@@ -68,7 +66,8 @@ window.uploadFile = function () {
     const base64 = e.target.result.split(',')[1];
     const fileData = { name: file.name, type: file.type, content: base64 };
     const userId = auth.currentUser.uid;
-    push(ref(db, `users/${userId}/folders/${folder}`), fileData);
+    push(ref(db, `users/${userId}/folders/${folder}`), fileData)
+      .then(() => alert('Arquivo enviado!'));
   };
   reader.readAsDataURL(file);
 };
@@ -97,5 +96,3 @@ onAuthStateChanged(auth, user => {
     updateFolderSelects();
   }
 });
-
-
