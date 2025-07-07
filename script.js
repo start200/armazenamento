@@ -50,11 +50,33 @@ window.showSection = function (sectionId) {
 
 window.createFolder = function () {
   const folderName = document.getElementById('newFolderName').value.trim();
-  if (!folderName) return alert('Nome inválido.');
-  const userId = auth.currentUser.uid;
-  set(ref(db, `users/${userId}/folders/${folderName}`), [])
-    .then(() => updateFolderSelects());
+
+  if (!folderName) {
+    alert('Digite um nome válido para a pasta.');
+    return;
+  }
+
+  const user = auth.currentUser;
+  if (!user) {
+    alert('Usuário não está autenticado.');
+    return;
+  }
+
+  const userId = user.uid;
+  const folderRef = ref(db, `users/${userId}/folders/${folderName}`);
+
+  set(folderRef, { createdAt: new Date().toISOString() })
+    .then(() => {
+      alert(`Pasta '${folderName}' criada com sucesso!`);
+      document.getElementById('newFolderName').value = '';
+      updateFolderSelects();
+    })
+    .catch(error => {
+      console.error("Erro ao criar pasta:", error);
+      alert("Erro ao criar pasta: " + error.message);
+    });
 };
+
 
 window.uploadFile = function () {
   const folder = document.getElementById('folderSelect').value;
