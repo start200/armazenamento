@@ -1,182 +1,101 @@
-let storage = JSON.parse(localStorage.getItem('fileManager95')) || { folders: {} };
-updateFolderSelects();
-renderFolders();
+import { auth, db } from './firebase.js';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import {
+  ref,
+  push,
+  get,
+  child,
+  set
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-function showSection(sectionId) {
-  document.querySelectorAll('.section').forEach(section => {
-    section.classList.add('hidden');
-  });
+window.login = function login() {
+  const email = document.getElementById('loginUsername').value;
+  const password = document.getElementById('loginPassword').value;
+
+  signInWithEmailAndPassword(auth, email, password)
+    .then(() => location.reload())
+    .catch(error => alert('Erro: ' + error.message));
+};
+
+window.register = function register() {
+  const email = document.getElementById('registerUsername').value;
+  const password = document.getElementById('registerPassword').value;
+
+  createUserWithEmailAndPassword(auth, email, password)
+    .then(() => alert('Registrado com sucesso!'))
+    .catch(error => alert('Erro: ' + error.message));
+};
+
+window.logout = function logout() {
+  signOut(auth).then(() => location.reload());
+};
+
+window.showRegister = function () {
+  document.getElementById('loginSection').classList.add('hidden');
+  document.getElementById('registerSection').classList.remove('hidden');
+};
+
+window.showLogin = function () {
+  document.getElementById('registerSection').classList.add('hidden');
+  document.getElementById('loginSection').classList.remove('hidden');
+};
+
+window.showSection = function (sectionId) {
+  document.querySelectorAll('.section').forEach(sec => sec.classList.add('hidden'));
   document.getElementById(sectionId).classList.remove('hidden');
-}
+};
 
-function createFolder() {
+window.createFolder = function () {
   const folderName = document.getElementById('newFolderName').value.trim();
-  if (folderName === '' || storage.folders[folderName]) {
-    alert('Nome inválido ou pasta já existe.');
-    return;
-  }
-  storage.folders[folderName] = [];
-  saveStorage();
+  if (!folderName) return alert('Nome inválido.');
+  const userId = auth.currentUser.uid;
+  set(ref(db, `users/${userId}/folders/${folderName}`), []);
   updateFolderSelects();
-  renderFolders();
-  document.getElementById('newFolderName').value = '';
-}
+};
+
+window.uploadFile = function () {
+  const folder = document.getElementById('folderSelect').value;
+  const fileInput = document.getElementById('fileInput');
+  if (!folder || fileInput.files.length === 0) return alert('Selecione pasta e arquivo.');
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const base64 = e.target.result.split(',')[1];
+    const fileData = { name: file.name, type: file.type, content: base64 };
+    const userId = auth.currentUser.uid;
+    push(ref(db, `users/${userId}/folders/${folder}`), fileData);
+  };
+  reader.readAsDataURL(file);
+};
 
 function updateFolderSelects() {
   const folderSelect = document.getElementById('folderSelect');
-  const folderSelectDoc = document.getElementById('folderSelectDoc');
   folderSelect.innerHTML = '';
-  folderSelectDoc.innerHTML = '';
-  for (let folder in storage.folders) {
-    folderSelect.innerHTML += `<option value="${folder}">${folder}</option>`;
-    folderSelectDoc.innerHTML += `<option value="${folder}">${folder}</option>`;
-  }
-}
-
-function uploadFile() {
-  const folder = document.getElementById('folderSelect').value;
-  const fileInput = document.getElementById('fileInput');
-  if (fileInput.files.length > 0) {
-    const file = fileInput.files[0];
-    const reader = new FileReader();
-
-    reader.onload = function (e) {
-      const fileData = {
-        name: file.name,
-        content: e.target.result,
-        type: file.type
-      };
-      storage.folders[folder].push(fileData);
-      saveStorage();
-      alert('Arquivo "' + file.name + '" enviado para "' + folder + '"');
-      fileInput.value = '';
-      renderFolders(); // Atualiza a lista após upload
-    };
-
-    reader.readAsDataURL(file);
-  } else {
-    alert('Selecione um arquivo para enviar.');
-  }
-}
-
-function saveDocument() {
-  const folder = document.getElementById('folderSelectDoc').value;
-  const content = document.getElementById('docEditor').value.trim();
-  if (content === '') {
-    alert('O documento está vazio.');
-    return;
-  }
-  const docName = 'Documento_' + (storage.folders[folder].length + 1) + '.txt';
-  const fileData = {
-    name: docName,
-    content: 'data:text/plain;base64,' + btoa(content),
-    type: 'text/plain'
-  };
-  storage.folders[folder].push(fileData);
-  saveStorage();
-  document.getElementById('docEditor').value = '';
-  alert('Documento "' + docName + '" salvo em "' + folder + '"');
-  renderFolders();
-}
-
-function renderFolders() {
-  const folderList = document.getElementById('folderList');
-  folderList.innerHTML = '';
-  for (let folder in storage.folders) {
-    const div = document.createElement('div');
-    div.className = 'folder';
-    div.textContent = folder;
-
-    div.onclick = () => openFolder(folder);
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = 'Excluir';
-    deleteBtn.style.marginLeft = '10px';
-    deleteBtn.onclick = (e) => {
-      e.stopPropagation();
-      if (confirm('Tem certeza que deseja excluir a pasta "' + folder + '"?')) {
-        delete storage.folders[folder];
-        saveStorage();
-        updateFolderSelects();
-        renderFolders();
-      }
-    };
-
-    div.appendChild(deleteBtn);
-    folderList.appendChild(div);
-  }
-}
-
-function openFolder(folder) {
-  const files = storage.folders[folder];
-  if (files.length === 0) {
-    alert('A pasta está vazia.');
-    return;
-  }
-
-  let fileList = '';
-  files.forEach((file, index) => {
-    fileList += `
-      <div style="margin-bottom: 10px;">
-        ${file.name} 
-        <a href="${file.content}" download="${file.name}">[Baixar]</a> 
-        <button onclick="viewFile('${folder}', ${index})">Visualizar</button>
-        <button onclick="deleteFile('${folder}', ${index})">Excluir</button>
-      </div>
-    `;
+  const userId = auth.currentUser?.uid;
+  if (!userId) return;
+  get(child(ref(db), `users/${userId}/folders`)).then(snapshot => {
+    if (snapshot.exists()) {
+      Object.keys(snapshot.val()).forEach(folder => {
+        const option = document.createElement('option');
+        option.value = folder;
+        option.textContent = folder;
+        folderSelect.appendChild(option);
+      });
+    }
   });
-
-  // Cria uma nova janela para listar arquivos
-  const newWindow = window.open('', '_blank', 'width=600,height=600,scrollbars=yes');
-  newWindow.document.write(`
-    <html>
-      <head><title>Arquivos em ${folder}</title></head>
-      <body>
-        <h2>Arquivos em "${folder}"</h2>
-        <div id="fileListContainer">${fileList}</div>
-        <script>
-          const storage = JSON.parse(localStorage.getItem('fileManager95')) || { folders: {} };
-
-          function viewFile(folder, index) {
-            const file = storage.folders[folder][index];
-            const fileWindow = window.open('', '_blank', 'width=600,height=600,scrollbars=yes');
-            fileWindow.document.write(\`
-              <html><head><title>\${file.name}</title></head><body>
-              <h3>\${file.name}</h3>
-              <iframe src="\${file.content}" style="width:100%;height:90vh;"></iframe>
-              </body></html>
-            \`);
-          }
-
-          function deleteFile(folder, index) {
-            if (confirm('Deseja excluir este arquivo?')) {
-              storage.folders[folder].splice(index, 1);
-              localStorage.setItem('fileManager95', JSON.stringify(storage));
-              alert('Arquivo excluído!');
-              location.reload();
-            }
-          }
-        <\/script>
-      </body>
-    </html>
-  `);
-  newWindow.document.close();
 }
 
-function viewFile(folder, index) {
-  // Função para abrir viewer.html (pode ser implementada para edição, visualização)
-  // Por ora está abrindo na nova janela pelo openFolder
-}
-
-function deleteFile(folder, index) {
-  if (confirm('Deseja excluir este arquivo?')) {
-    storage.folders[folder].splice(index, 1);
-    saveStorage();
-    alert('Arquivo excluído!');
-    renderFolders();
+onAuthStateChanged(auth, user => {
+  if (user) {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('appSection').classList.remove('hidden');
+    updateFolderSelects();
   }
-}
+});
 
-function saveStorage() {
-  localStorage.setItem('fileManager95', JSON.stringify(storage));
-}
+
