@@ -1,3 +1,4 @@
+
 import { auth, db } from './firebase.js';
 import {
   createUserWithEmailAndPassword,
@@ -86,8 +87,10 @@ window.uploadFile = function () {
 
 function updateFolderSelects() {
   const folderSelect = document.getElementById('folderSelect');
+  const notepadSelect = document.getElementById('notepadFolderSelect');
   const folderList = document.getElementById('folderList');
-  folderSelect.innerHTML = '';
+  if (folderSelect) folderSelect.innerHTML = '';
+  if (notepadSelect) notepadSelect.innerHTML = '';
   if (folderList) folderList.innerHTML = '';
   const userId = auth.currentUser?.uid;
   if (!userId) return;
@@ -95,10 +98,11 @@ function updateFolderSelects() {
     if (snapshot.exists()) {
       const folders = snapshot.val();
       Object.keys(folders).forEach(folder => {
-        const option = document.createElement('option');
-        option.value = folder;
-        option.textContent = folder;
-        folderSelect.appendChild(option);
+        const opt = document.createElement('option');
+        opt.value = folder;
+        opt.textContent = folder;
+        if (folderSelect) folderSelect.appendChild(opt.cloneNode(true));
+        if (notepadSelect) notepadSelect.appendChild(opt.cloneNode(true));
         if (folderList) {
           const div = document.createElement('div');
           div.className = 'folder';
@@ -126,7 +130,6 @@ function listFilesInFolder(folderName) {
         const file = files[fileId];
         const li = document.createElement('li');
         li.textContent = file.name + ' ';
-
         const viewBtn = document.createElement('button');
         viewBtn.textContent = '👁';
         viewBtn.onclick = () => {
@@ -137,7 +140,6 @@ function listFilesInFolder(folderName) {
           const url = URL.createObjectURL(fileBlob);
           window.open(url, '_blank');
         };
-
         const editBtn = document.createElement('button');
         editBtn.textContent = '✏️';
         editBtn.onclick = () => {
@@ -146,11 +148,9 @@ function listFilesInFolder(folderName) {
           if (newContent !== null) {
             const updatedData = { ...file, content: btoa(newContent) };
             set(ref(db, `users/${userId}/folders/${folderName}/${fileId}`), updatedData)
-              .then(() => alert("Arquivo atualizado!"))
               .then(() => listFilesInFolder(folderName));
           }
         };
-
         const delBtn = document.createElement('button');
         delBtn.textContent = '🗑';
         delBtn.onclick = () => {
@@ -159,7 +159,6 @@ function listFilesInFolder(folderName) {
               .then(() => listFilesInFolder(folderName));
           }
         };
-
         li.appendChild(viewBtn);
         li.appendChild(editBtn);
         li.appendChild(delBtn);
@@ -172,7 +171,7 @@ function listFilesInFolder(folderName) {
 }
 
 window.saveNewDocument = function () {
-  const folder = document.getElementById('folderSelect').value;
+  const folder = document.getElementById('notepadFolderSelect').value;
   const filename = prompt("Nome do novo arquivo:");
   const content = document.getElementById('notepadArea').value;
   if (!folder || !filename || !content) return alert("Preencha todos os campos.");
