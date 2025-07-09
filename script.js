@@ -81,10 +81,38 @@ window.uploadFile = function () {
   reader.readAsDataURL(file);
 };
 
+window.saveDocument = function () {
+  const folder = document.getElementById('folderSelectDoc').value;
+  const content = document.getElementById('docEditor').value;
+  const name = document.getElementById('docName').value.trim();
+
+  if (!folder || !content || !name) return alert('Preencha todos os campos.');
+
+  const userId = auth.currentUser?.uid;
+  if (!userId) return alert('Usuário não autenticado.');
+
+  const fileData = {
+    name: name.endsWith('.txt') ? name : name + '.txt',
+    type: 'text/plain',
+    content: btoa(content),
+  };
+
+  push(ref(db, `users/${userId}/folders/${folder}`), fileData)
+    .then(() => {
+      alert('Documento salvo!');
+      document.getElementById('docEditor').value = '';
+      document.getElementById('docName').value = '';
+    })
+    .catch(error => alert('Erro ao salvar documento: ' + error.message));
+};
+
 function updateFolderSelects() {
   const folderSelect = document.getElementById('folderSelect');
+  const folderSelectDoc = document.getElementById('folderSelectDoc');
   const folderList = document.getElementById('folderList');
+
   folderSelect.innerHTML = '';
+  if (folderSelectDoc) folderSelectDoc.innerHTML = '';
   if (folderList) folderList.innerHTML = '';
 
   const userId = auth.currentUser?.uid;
@@ -99,6 +127,11 @@ function updateFolderSelects() {
         option.value = folder;
         option.textContent = folder;
         folderSelect.appendChild(option);
+
+        const optionDoc = document.createElement('option');
+        optionDoc.value = folder;
+        optionDoc.textContent = folder;
+        folderSelectDoc.appendChild(optionDoc);
 
         // Lista visual
         if (folderList) {
@@ -145,7 +178,6 @@ function listFilesInFolderGerenciar(folderName) {
         const li = document.createElement('li');
         li.textContent = file.name;
 
-        // Visualizar
         const viewBtn = document.createElement('button');
         viewBtn.textContent = 'Visualizar';
         viewBtn.onclick = () => {
@@ -157,7 +189,6 @@ function listFilesInFolderGerenciar(folderName) {
           window.open(url, '_blank');
         };
 
-        // Baixar
         const downloadBtn = document.createElement('button');
         downloadBtn.textContent = 'Download';
         downloadBtn.onclick = () => {
@@ -171,7 +202,6 @@ function listFilesInFolderGerenciar(folderName) {
           a.click();
         };
 
-        // Excluir
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = 'Excluir';
         deleteBtn.onclick = () => {
