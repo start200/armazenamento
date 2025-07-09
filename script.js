@@ -1,4 +1,3 @@
-
 import { auth, db } from './firebase.js';
 import {
   createUserWithEmailAndPassword,
@@ -52,27 +51,24 @@ window.showSection = function (sectionId) {
 
 window.createFolder = function () {
   const folderName = document.getElementById('newFolderName').value.trim();
-  if (!folderName) return alert('Digite um nome válido para a pasta.');
-  const user = auth.currentUser;
-  if (!user) return alert('Usuário não está autenticado.');
-  const userId = user.uid;
-  const folderRef = ref(db, `users/${userId}/folders/${folderName}`);
-  set(folderRef, { createdAt: new Date().toISOString() })
+  if (!folderName) return alert('Digite um nome válido.');
+  const userId = auth.currentUser?.uid;
+  if (!userId) return alert('Usuário não autenticado.');
+
+  set(ref(db, `users/${userId}/folders/${folderName}`), { createdAt: new Date().toISOString() })
     .then(() => {
-      alert(`Pasta '${folderName}' criada com sucesso!`);
+      alert(`Pasta '${folderName}' criada!`);
       document.getElementById('newFolderName').value = '';
       updateFolderSelects();
     })
-    .catch(error => {
-      console.error("Erro ao criar pasta:", error);
-      alert("Erro ao criar pasta: " + error.message);
-    });
+    .catch(err => alert('Erro: ' + err.message));
 };
 
 window.uploadFile = function () {
   const folder = document.getElementById('folderSelect').value;
   const fileInput = document.getElementById('fileInput');
   if (!folder || fileInput.files.length === 0) return alert('Selecione pasta e arquivo.');
+
   const file = fileInput.files[0];
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -87,11 +83,8 @@ window.uploadFile = function () {
 
 function updateFolderSelects() {
   const folderSelect = document.getElementById('folderSelect');
-  const folderSelectDoc = document.getElementById('folderSelectDoc');
   const folderList = document.getElementById('folderList');
-
-  if (folderSelect) folderSelect.innerHTML = '';
-  if (folderSelectDoc) folderSelectDoc.innerHTML = '';
+  folderSelect.innerHTML = '';
   if (folderList) folderList.innerHTML = '';
 
   const userId = auth.currentUser?.uid;
@@ -100,106 +93,41 @@ function updateFolderSelects() {
   get(child(ref(db), `users/${userId}/folders`)).then(snapshot => {
     if (snapshot.exists()) {
       const folders = snapshot.val();
-
       Object.keys(folders).forEach(folder => {
-        const option1 = document.createElement('option');
-        option1.value = folder;
-        option1.textContent = folder;
-        if (folderSelect) folderSelect.appendChild(option1);
+        // Dropdown
+        const option = document.createElement('option');
+        option.value = folder;
+        option.textContent = folder;
+        folderSelect.appendChild(option);
 
-        const option2 = document.createElement('option');
-        option2.value = folder;
-        option2.textContent = folder;
-        if (folderSelectDoc) folderSelectDoc.appendChild(option2);
-
-        // Visual list
+        // Lista visual
         if (folderList) {
           const div = document.createElement('div');
           div.className = 'folder';
           div.textContent = folder;
           div.onclick = () => listFilesInFolderGerenciar(folder);
+
+          // Botão de exclusão da pasta
+          const delBtn = document.createElement('button');
+          delBtn.textContent = 'Excluir Pasta';
+          delBtn.style.marginLeft = '10px';
+          delBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (confirm(`Deseja excluir a pasta "${folder}" e todos os seus arquivos?`)) {
+              remove(ref(db, `users/${userId}/folders/${folder}`)).then(() => {
+                alert('Pasta excluída!');
+                updateFolderSelects();
+              });
+            }
+          };
+
+          div.appendChild(delBtn);
           folderList.appendChild(div);
         }
       });
-
-      const firstFolder = Object.keys(folders)[0];
-      listFilesInFolder(firstFolder);
     }
   });
 }
-
-
-function listFilesInFolder(folderName) {
-  const fileList = document.getElementById('fileList');
-  if (!fileList) return;
-  fileList.innerHTML = '';
-  const userId = auth.currentUser?.uid;
-  if (!userId) return;
-  get(child(ref(db), `users/${userId}/folders/${folderName}`)).then(snapshot => {
-    if (snapshot.exists()) {
-      const files = snapshot.val();
-      Object.keys(files).forEach(fileId => {
-        const file = files[fileId];
-        const li = document.createElement('li');
-        li.textContent = file.name + ' ';
-        const viewBtn = document.createElement('button');
-        viewBtn.textContent = '👁';
-        viewBtn.onclick = () => {
-          const blob = atob(file.content);
-          const byteArray = new Uint8Array(blob.length);
-          for (let i = 0; i < blob.length; i++) byteArray[i] = blob.charCodeAt(i);
-          const fileBlob = new Blob([byteArray], { type: file.type });
-          const url = URL.createObjectURL(fileBlob);
-          window.open(url, '_blank');
-        };
-        const editBtn = document.createElement('button');
-        editBtn.textContent = '✏️';
-        editBtn.onclick = () => {
-          const decoded = atob(file.content);
-          const newContent = prompt("Editar conteúdo:", decoded);
-          if (newContent !== null) {
-            const updatedData = { ...file, content: btoa(newContent) };
-            set(ref(db, `users/${userId}/folders/${folderName}/${fileId}`), updatedData)
-              .then(() => listFilesInFolder(folderName));
-          }
-        };
-        const delBtn = document.createElement('button');
-        delBtn.textContent = '🗑';
-        delBtn.onclick = () => {
-          if (confirm(`Tem certeza que deseja excluir ${file.name}?`)) {
-            remove(ref(db, `users/${userId}/folders/${folderName}/${fileId}`))
-              .then(() => listFilesInFolder(folderName));
-          }
-        };
-        li.appendChild(viewBtn);
-        li.appendChild(editBtn);
-        li.appendChild(delBtn);
-        fileList.appendChild(li);
-      });
-    } else {
-      fileList.innerHTML = '<li>Nenhum arquivo nesta pasta.</li>';
-    }
-  });
-}
-
-window.saveNewDocument = function () {
-  const folder = document.getElementById('notepadFolderSelect').value;
-  const filename = prompt("Nome do novo arquivo:");
-  const content = document.getElementById('notepadArea').value;
-  if (!folder || !filename || !content) return alert("Preencha todos os campos.");
-  const fileData = { name: filename, type: 'text/plain', content: btoa(content) };
-  const userId = auth.currentUser?.uid;
-  push(ref(db, `users/${userId}/folders/${folder}`), fileData)
-    .then(() => alert('Documento salvo!'));
-};
-
-onAuthStateChanged(auth, user => {
-  if (user) {
-    document.getElementById('loginSection').style.display = 'none';
-    document.getElementById('appSection').classList.remove('hidden');
-    updateFolderSelects();
-  }
-});
 
 function listFilesInFolderGerenciar(folderName) {
   const folderFilesList = document.getElementById('folderFilesList');
@@ -217,27 +145,38 @@ function listFilesInFolderGerenciar(folderName) {
         const li = document.createElement('li');
         li.textContent = file.name;
 
-        // Botão visualizar
+        // Visualizar
         const viewBtn = document.createElement('button');
         viewBtn.textContent = 'Visualizar';
         viewBtn.onclick = () => {
           const blob = atob(file.content);
           const byteArray = new Uint8Array(blob.length);
-          for (let i = 0; i < blob.length; i++) {
-            byteArray[i] = blob.charCodeAt(i);
-          }
+          for (let i = 0; i < blob.length; i++) byteArray[i] = blob.charCodeAt(i);
           const fileBlob = new Blob([byteArray], { type: file.type });
           const url = URL.createObjectURL(fileBlob);
           window.open(url, '_blank');
         };
 
-        // Botão excluir
+        // Baixar
+        const downloadBtn = document.createElement('button');
+        downloadBtn.textContent = 'Download';
+        downloadBtn.onclick = () => {
+          const blob = atob(file.content);
+          const byteArray = new Uint8Array(blob.length);
+          for (let i = 0; i < blob.length; i++) byteArray[i] = blob.charCodeAt(i);
+          const fileBlob = new Blob([byteArray], { type: file.type });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(fileBlob);
+          a.download = file.name;
+          a.click();
+        };
+
+        // Excluir
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = 'Excluir';
         deleteBtn.onclick = () => {
           if (confirm('Deseja excluir este arquivo?')) {
-            const fileRef = ref(db, `users/${userId}/folders/${folderName}/${fileId}`);
-            set(fileRef, null).then(() => {
+            remove(ref(db, `users/${userId}/folders/${folderName}/${fileId}`)).then(() => {
               alert('Arquivo excluído!');
               listFilesInFolderGerenciar(folderName);
             });
@@ -245,6 +184,7 @@ function listFilesInFolderGerenciar(folderName) {
         };
 
         li.appendChild(viewBtn);
+        li.appendChild(downloadBtn);
         li.appendChild(deleteBtn);
         folderFilesList.appendChild(li);
       });
@@ -254,3 +194,10 @@ function listFilesInFolderGerenciar(folderName) {
   });
 }
 
+onAuthStateChanged(auth, user => {
+  if (user) {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('appSection').classList.remove('hidden');
+    updateFolderSelects();
+  }
+});
