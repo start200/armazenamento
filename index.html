@@ -50,11 +50,13 @@
 
       <!-- Seção: Bloco de Notas -->
       <section id="documents" class="section hidden">
-        <h2>Bloco de Notas</h2>
-        <select id="folderSelectDoc"></select><br /><br />
-        <textarea id="notepadArea" rows="10" cols="50" placeholder="Escreva seu documento..."></textarea><br />
-        <button onclick="saveNewDocument()">Salvar Documento</button>
-      </section>
+  <h2>Criar Documento</h2>
+    <select id="folderSelectDoc"></select><br /><br />
+       <textarea id="docEditor" rows="10" cols="50" placeholder="Digite seu documento aqui..."></textarea><br />
+       <input type="text" id="docName" placeholder="Nome do documento.txt" /><br /><br />
+       <button onclick="saveDocument()">Salvar Documento</button>
+     </section>
+
 
       <!-- Seção: Gerenciar Pastas -->
       <section id="folders" class="section hidden">
