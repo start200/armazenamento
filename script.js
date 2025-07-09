@@ -87,22 +87,32 @@ window.uploadFile = function () {
 
 function updateFolderSelects() {
   const folderSelect = document.getElementById('folderSelect');
-  const notepadSelect = document.getElementById('notepadFolderSelect');
+  const folderSelectDoc = document.getElementById('folderSelectDoc');
   const folderList = document.getElementById('folderList');
+
   if (folderSelect) folderSelect.innerHTML = '';
-  if (notepadSelect) notepadSelect.innerHTML = '';
+  if (folderSelectDoc) folderSelectDoc.innerHTML = '';
   if (folderList) folderList.innerHTML = '';
+
   const userId = auth.currentUser?.uid;
   if (!userId) return;
+
   get(child(ref(db), `users/${userId}/folders`)).then(snapshot => {
     if (snapshot.exists()) {
       const folders = snapshot.val();
+
       Object.keys(folders).forEach(folder => {
-        const opt = document.createElement('option');
-        opt.value = folder;
-        opt.textContent = folder;
-        if (folderSelect) folderSelect.appendChild(opt.cloneNode(true));
-        if (notepadSelect) notepadSelect.appendChild(opt.cloneNode(true));
+        const option1 = document.createElement('option');
+        option1.value = folder;
+        option1.textContent = folder;
+        if (folderSelect) folderSelect.appendChild(option1);
+
+        const option2 = document.createElement('option');
+        option2.value = folder;
+        option2.textContent = folder;
+        if (folderSelectDoc) folderSelectDoc.appendChild(option2);
+
+        // Visual list
         if (folderList) {
           const div = document.createElement('div');
           div.className = 'folder';
@@ -111,11 +121,13 @@ function updateFolderSelects() {
           folderList.appendChild(div);
         }
       });
+
       const firstFolder = Object.keys(folders)[0];
       listFilesInFolder(firstFolder);
     }
   });
 }
+
 
 function listFilesInFolder(folderName) {
   const fileList = document.getElementById('fileList');
