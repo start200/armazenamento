@@ -117,7 +117,7 @@ function updateFolderSelects() {
           const div = document.createElement('div');
           div.className = 'folder';
           div.textContent = folder;
-          div.onclick = () => listFilesInFolder(folder);
+          div.onclick = () => listFilesInFolderGerenciar(folder);
           folderList.appendChild(div);
         }
       });
@@ -200,3 +200,57 @@ onAuthStateChanged(auth, user => {
     updateFolderSelects();
   }
 });
+
+function listFilesInFolderGerenciar(folderName) {
+  const folderFilesList = document.getElementById('folderFilesList');
+  folderFilesList.innerHTML = '';
+
+  const userId = auth.currentUser?.uid;
+  if (!userId) return;
+
+  get(child(ref(db), `users/${userId}/folders/${folderName}`)).then(snapshot => {
+    if (snapshot.exists()) {
+      const files = snapshot.val();
+
+      Object.keys(files).forEach(fileId => {
+        const file = files[fileId];
+        const li = document.createElement('li');
+        li.textContent = file.name;
+
+        // Botão visualizar
+        const viewBtn = document.createElement('button');
+        viewBtn.textContent = 'Visualizar';
+        viewBtn.onclick = () => {
+          const blob = atob(file.content);
+          const byteArray = new Uint8Array(blob.length);
+          for (let i = 0; i < blob.length; i++) {
+            byteArray[i] = blob.charCodeAt(i);
+          }
+          const fileBlob = new Blob([byteArray], { type: file.type });
+          const url = URL.createObjectURL(fileBlob);
+          window.open(url, '_blank');
+        };
+
+        // Botão excluir
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Excluir';
+        deleteBtn.onclick = () => {
+          if (confirm('Deseja excluir este arquivo?')) {
+            const fileRef = ref(db, `users/${userId}/folders/${folderName}/${fileId}`);
+            set(fileRef, null).then(() => {
+              alert('Arquivo excluído!');
+              listFilesInFolderGerenciar(folderName);
+            });
+          }
+        };
+
+        li.appendChild(viewBtn);
+        li.appendChild(deleteBtn);
+        folderFilesList.appendChild(li);
+      });
+    } else {
+      folderFilesList.innerHTML = '<li>Nenhum arquivo nesta pasta.</li>';
+    }
+  });
+}
+
