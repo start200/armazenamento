@@ -94,7 +94,7 @@ window.saveDocument = function () {
   const fileData = {
     name: name.endsWith('.txt') ? name : name + '.txt',
     type: 'text/plain',
-    content: btoa(content),
+    content: btoa(unescape(encodeURIComponent(content))),
   };
 
   push(ref(db, `users/${userId}/folders/${folder}`), fileData)
@@ -181,10 +181,8 @@ function listFilesInFolderGerenciar(folderName) {
         const viewBtn = document.createElement('button');
         viewBtn.textContent = 'Visualizar';
         viewBtn.onclick = () => {
-          const blob = atob(file.content);
-          const byteArray = new Uint8Array(blob.length);
-          for (let i = 0; i < blob.length; i++) byteArray[i] = blob.charCodeAt(i);
-          const fileBlob = new Blob([byteArray], { type: file.type });
+          const decoded = decodeURIComponent(escape(atob(file.content)));
+          const byteArray = new TextEncoder().encode(decoded);
           const url = URL.createObjectURL(fileBlob);
           window.open(url, '_blank');
         };
