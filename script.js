@@ -94,7 +94,7 @@ window.saveDocument = function () {
   const fileData = {
     name: name.endsWith('.txt') ? name : name + '.txt',
     type: 'text/plain',
-    content: btoa(unescape(encodeURIComponent(content))),
+    content: btoa(unescape(encodeURIComponent(content))), // Compatível com UTF-8
   };
 
   push(ref(db, `users/${userId}/folders/${folder}`), fileData)
@@ -122,7 +122,6 @@ function updateFolderSelects() {
     if (snapshot.exists()) {
       const folders = snapshot.val();
       Object.keys(folders).forEach(folder => {
-        // Dropdown
         const option = document.createElement('option');
         option.value = folder;
         option.textContent = folder;
@@ -133,14 +132,12 @@ function updateFolderSelects() {
         optionDoc.textContent = folder;
         folderSelectDoc.appendChild(optionDoc);
 
-        // Lista visual
         if (folderList) {
           const div = document.createElement('div');
           div.className = 'folder';
           div.textContent = folder;
           div.onclick = () => listFilesInFolderGerenciar(folder);
 
-          // Botão de exclusão da pasta
           const delBtn = document.createElement('button');
           delBtn.textContent = 'Excluir Pasta';
           delBtn.style.marginLeft = '10px';
@@ -182,7 +179,7 @@ function listFilesInFolderGerenciar(folderName) {
         viewBtn.textContent = 'Visualizar';
         viewBtn.onclick = () => {
           const decoded = decodeURIComponent(escape(atob(file.content)));
-          const byteArray = new TextEncoder().encode(decoded);
+          const fileBlob = new Blob([decoded], { type: file.type });
           const url = URL.createObjectURL(fileBlob);
           window.open(url, '_blank');
         };
@@ -190,10 +187,8 @@ function listFilesInFolderGerenciar(folderName) {
         const downloadBtn = document.createElement('button');
         downloadBtn.textContent = 'Download';
         downloadBtn.onclick = () => {
-          const blob = atob(file.content);
-          const byteArray = new Uint8Array(blob.length);
-          for (let i = 0; i < blob.length; i++) byteArray[i] = blob.charCodeAt(i);
-          const fileBlob = new Blob([byteArray], { type: file.type });
+          const decoded = decodeURIComponent(escape(atob(file.content)));
+          const fileBlob = new Blob([decoded], { type: file.type });
           const a = document.createElement('a');
           a.href = URL.createObjectURL(fileBlob);
           a.download = file.name;
